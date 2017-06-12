@@ -96,7 +96,7 @@ function parse_opts() {
   n_opts = split(opts_str, opts)
 
   for(i = 1; i <= n_opts; i++) {
-    if(opts[i] ~ /^-\w/) {
+    if(opts[i] ~ /-[a-zA-Z]{1}/) {
       for(opt_name in opt_names) {
         if(spec_opts[opt_name, "little"] == opts[i]) {
           do_pragmas(opt_name)
