@@ -1,0 +1,131 @@
+#!/usr/bin/awk -f
+
+function debug(str) {
+  printf "%s\n", str > "/dev/stderr"
+}
+
+function error(str) {
+  str = str " (line: " NR ")"
+  system("echo '" str "' >&2")
+  exit 1
+}
+
+function indent_level() {
+  return match($0, /\w/)
+}
+
+function strip(str) {
+  clone=str
+  gsub(/^\s+/, "", clone)
+  gsub(/\s+$/, "", clone)
+  return clone
+}
+
+function match_extract(str, ere) {
+  match(str, ere)
+  return substr($0, RSTART, RLENGTH)
+}
+
+# Consumes the pragma on the current line, adding it to
+# the appropriate pragma field in spec_opts
+function get_pragma(opt_name) {
+  pragma = $1
+
+  if(length(pragma) == 0) {
+    error("Lines beginning with ! must contain a pragma")
+  } else if(pragma == "!set") {
+    assign = $2
+
+    if(length(assign) == 0) {
+      error("!set pragma line must have an assignment of the form `var=value`")
+    }
+
+    spec_opts[opt_name, "sets"] = assign
+  } else {
+    error("Given pragma `" pragma "` is not a valid pragma")
+  }
+}
+
+# Consumes the option spec beginning on the current line,
+# adding its details to spec_opts
+function eat_opt() {
+  doc_string = ""
+  base_indent = indent_level()
+  name = $0
+
+  opt_names[name]
+  spec_opts[name]
+
+  match($0, /-\w/)
+  spec_opts[name, "little"] = substr($0, RSTART, RLENGTH)
+
+  match($0, /--\w+/)
+  spec_opts[name, "big"]= substr($0, RSTART, RLENGTH)
+
+  while(getline == 1) {
+    if(indent_level() <= base_indent) {
+      break
+    } else {
+      if($0 ~ /^\s*!/) {
+        get_pragma(name)
+      } else {
+        if (length(doc_string) == 0) {
+          doc_string = doc_string strip($0)
+        } else {
+          doc_string = doc_string " " strip($0)
+        }
+      }
+    }
+  }
+}
+
+function handle_line() {
+  if($0 ~ /^\s*opt/) {
+    eat_opt()
+  }
+}
+
+function do_pragmas(opt_name) {
+  if(spec_opts[opt_name, "sets"]) {
+    outstr = outstr spec_opts[opt_name, "sets"] "\n"
+  }
+}
+
+# Uses the specification in spec_opts to parse the options in opts
+function parse_opts() {
+  n_opts = split(opts_str, opts)
+
+  for(i = 1; i <= n_opts; i++) {
+    if(opts[i] ~ /^-\w/) {
+      for(opt_name in opt_names) {
+        if(spec_opts[opt_name, "little"] == opts[i]) {
+          do_pragmas(opt_name)
+        }
+      }
+    }
+  }
+
+  print outstr
+}
+
+BEGIN {
+  # Opts given to the calling program
+  opts_str=""
+
+  # Output shell code buffer
+  outstr=""
+
+  # Specified options parsed from specification string
+  split("", spec_opts)
+}
+
+{
+  opts_str=$0
+  if(getline == 1) {
+    handle_line()
+  } else {
+    error("unexpected end of input")
+  }
+
+  parse_opts()
+}
