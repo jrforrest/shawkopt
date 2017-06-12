@@ -2,7 +2,11 @@
 
 set -e
 
+limit_to=$1
+test_number=0
+
 success=true
+
 
 succeed() {
   maybecolor 32 "[ OK     ] ${1}"
@@ -24,13 +28,18 @@ maybecolor() {
 }
 
 with() {
-  echo "$1"
-}
-
-it() {
+  local input="$1"
+  shift 2 #gobble "it"
   local spec="$1"
   local expected_output="$2"
-  local input="$(cat)"
+
+  test_number=$(( test_number + 1 ))
+
+  # Only run this test if it's the one requested
+  if ! [ -z "$limit_to" ] && [ "$test_number" -ne "$limit_to" ]; then
+    return 0
+  fi
+
   local output=$( echo "$input" | ./shawkopt || true)
 
   if [ "$output" = "$expected_output" ]; then
@@ -43,14 +52,20 @@ it() {
 with "-v
   opt -v --verbose
     Sets verbose mode
-    !set verbose=true" |
+    !set verbose=true" \
 it "Sets the verbose arg to true" \
   "verbose=true"
 
 with "
   opt -v --verbose
-  !set verbose=true" |
+  !set verbose=true" \
 it "Does not set the verbose arg to true" \
   ""
+
+with "--verbose
+  opt -v --verbose
+  !set verbose=true" \
+it "Sets the verbose arg to true"\
+  "verbose=true"
 
 [ "$success" = "true" ] || exit 1

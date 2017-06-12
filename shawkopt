@@ -91,17 +91,32 @@ function do_pragmas(opt_name) {
   }
 }
 
+function get_matching_opt_name(opt, type) {
+  for(opt_name in opt_names) {
+    if(spec_opts[opt_name, type] == opt) {
+      return opt_name
+    }
+  }
+}
+
 # Uses the specification in spec_opts to parse the options in opts
 function parse_opts() {
   n_opts = split(opts_str, opts)
 
   for(i = 1; i <= n_opts; i++) {
-    if(opts[i] ~ /-[a-zA-Z]{1}/) {
-      for(opt_name in opt_names) {
-        if(spec_opts[opt_name, "little"] == opts[i]) {
-          do_pragmas(opt_name)
-        }
-      }
+    type = ""
+    if(opts[i] ~ /-[a-zA-Z]([^a-zA-Z]|$)/) {
+      type = "little"
+    } else if(opts[i] ~ /--[a-zA-Z]{2,}/) {
+      type = "big"
+    }
+
+    matching_opt_name = get_matching_opt_name(opts[i], type)
+
+    if(matching_opt_name) {
+      do_pragmas(opt_name)
+    } else {
+      error("No such option `" opts[i] "`")
     }
   }
 
