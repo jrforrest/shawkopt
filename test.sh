@@ -40,7 +40,7 @@ with() {
     return 0
   fi
 
-  local output=$( echo "$input" | ./shawkopt || true)
+  local output="$( echo "$input" | ./shawkopt || true)"
 
   if [ "$output" = "$expected_output" ]; then
     succeed "$spec"
@@ -53,19 +53,28 @@ with "-v
   opt -v --verbose
     Sets verbose mode
     !set verbose=true" \
-it "Sets the verbose arg to true" \
+it "can handle short args" \
   "verbose=true"
 
 with "
   opt -v --verbose
-  !set verbose=true" \
-it "Does not set the verbose arg to true" \
+    !set verbose=true" \
+it "doesn't set  opts that aren't given" \
   ""
 
 with "--verbose
   opt -v --verbose
-  !set verbose=true" \
-it "Sets the verbose arg to true"\
+    !set verbose=true" \
+it "handles long options" \
   "verbose=true"
+
+with "--verbose -z
+  opt -z
+    !set some_random_var=true
+  opt -v --verbose
+    !set verbose=true" \
+it "Can handle multiple args of mixed types" \
+  "verbose=true
+some_random_var=true"
 
 [ "$success" = "true" ] || exit 1
