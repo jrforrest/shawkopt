@@ -28,6 +28,8 @@ maybecolor() {
 }
 
 with() {
+  local args="$1"
+  shift
   local input="$1"
   shift 2 #gobble "it"
   local spec="$1"
@@ -40,7 +42,9 @@ with() {
     return 0
   fi
 
-  local output="$( echo "$input" | ./shawkopt || true)"
+  export SHAWKOPT_ARGS="$args"
+
+  local output="$( echo "$input" | ./shawkopt || true )"
 
   if [ "$output" = "$expected_output" ]; then
     succeed "$spec"
@@ -49,26 +53,26 @@ with() {
   fi
 }
 
-with "-v
+with "-v" "
   opt -v --verbose
     Sets verbose mode
     !set verbose=true" \
 it "can handle short args" \
   "verbose=true"
 
-with "
+with "" "
   opt -v --verbose
     !set verbose=true" \
 it "doesn't set  opts that aren't given" \
   ""
 
-with "--verbose
+with "--verbose" "
   opt -v --verbose
     !set verbose=true" \
 it "handles long options" \
   "verbose=true"
 
-with "--verbose -z
+with "--verbose -z" "
   opt -z
     !set some_random_var=true
   opt -v --verbose

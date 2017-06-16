@@ -88,11 +88,15 @@ function eat_opt() {
 }
 
 function handle_line() {
+  # Opt definition
   if($0 ~ /^\s*opt/) {
     eat_opt()
     if(result == 1) {
       handle_line()
     }
+  # Skip blank
+  } else if($0 ~ /^\s*$/) {
+    #nop
   } else {
     error("Unrecognized directive: " $0)
   }
@@ -137,23 +141,16 @@ function parse_opts() {
 }
 
 BEGIN {
-  # Opts given to the calling program
-  opts_str=""
+  opts_str=ENVIRON["SHAWKOPT_ARGS"]
 
   # Output shell code buffer
   outstr=""
-
-  # Specified options parsed from specification string
-  split("", spec_opts)
 }
 
 {
-  opts_str=$0
-  if(getline == 1) {
-    handle_line()
-  } else {
-    error("unexpected end of input")
-  }
+  handle_line()
+}
 
+END {
   parse_opts()
 }
